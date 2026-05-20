@@ -1,9 +1,9 @@
 package com.notify.ecommerce.service;
 
 import com.notify.agent.annotations.*;
-import com.notify.agent.models.subject.EmailSubject;
-import com.notify.agent.models.subject.SmsSubject;
-import com.notify.agent.models.subject.Subject;
+import com.notify.agent.client.models.subject.EmailSubject;
+import com.notify.agent.client.models.subject.SmsSubject;
+import com.notify.agent.client.models.subject.Subject;
 import com.notify.ecommerce.model.*;
 import com.notify.ecommerce.store.CartStore;
 import com.notify.ecommerce.store.CustomerStore;
@@ -21,10 +21,10 @@ import java.util.Map;
  * Core e-commerce service that exercises all Notify SDK annotations.
  *
  * Events:
- *   - ORDER_PLACED      (immediate email, fraud + inventory rules)
- *   - PAYMENT_FAILED    (high-priority SMS)
- *   - ORDER_SHIPPED     (immediate email)
- *   - ABANDONED_CART     (deferred/scheduled email)
+ * - ORDER_PLACED (immediate email, fraud + inventory rules)
+ * - PAYMENT_FAILED (high-priority SMS)
+ * - ORDER_SHIPPED (immediate email)
+ * - ABANDONED_CART (deferred/scheduled email)
  */
 @Service
 public class OrderService {
@@ -45,58 +45,28 @@ public class OrderService {
     // EVENTS
     // ═══════════════════════════════════════════
 
-    @Event(
-        key = "ORDER_PLACED",
-        description = "Customer placed an order",
-        eventType = "static",
-        scheduleIntent = "immediate",
-        preferredTimeWindow = "09:00-18:00",
-        priority = 5,
-        payload = OrderPayload.class
-    )
+    @Event(key = "ORDER_PLACED", description = "Customer placed an order", eventType = "static", scheduleIntent = "immediate", preferredTimeWindow = "09:00-18:00", priority = 2, payload = OrderPayload.class)
     public OrderPayload placeOrder(OrderPayload payload) {
-        log.info("📦 Order placed: {} for customer {} — ${}", payload.getOrderId(), payload.getCustomerId(), payload.getAmount());
+        log.info("📦 Order placed: {} for customer {} — ${}", payload.getOrderId(), payload.getCustomerId(),
+                payload.getAmount());
         orders.save(payload);
         return payload;
     }
 
-    @Event(
-        key = "PAYMENT_FAILED",
-        description = "Payment processing failed for an order",
-        eventType = "static",
-        scheduleIntent = "immediate",
-        preferredTimeWindow = "00:00-23:59",
-        priority = 9,
-        payload = OrderPayload.class
-    )
+    @Event(key = "PAYMENT_FAILED", description = "Payment processing failed for an order", eventType = "static", scheduleIntent = "immediate", preferredTimeWindow = "00:00-23:59", priority = 4, payload = OrderPayload.class)
     public OrderPayload reportPaymentFailed(OrderPayload payload) {
         log.warn("💳 Payment FAILED for order: {} — ${}", payload.getOrderId(), payload.getAmount());
         return payload;
     }
 
-    @Event(
-        key = "ORDER_SHIPPED",
-        description = "Order has been shipped to the customer",
-        eventType = "static",
-        scheduleIntent = "immediate",
-        preferredTimeWindow = "09:00-18:00",
-        priority = 5,
-        payload = ShipmentPayload.class
-    )
+    @Event(key = "ORDER_SHIPPED", description = "Order has been shipped to the customer", eventType = "static", scheduleIntent = "immediate", preferredTimeWindow = "09:00-18:00", priority = 5, payload = ShipmentPayload.class)
     public ShipmentPayload shipOrder(ShipmentPayload payload) {
-        log.info("Order shipped: {} via {} — tracking: {}", payload.getOrderId(), payload.getCarrier(), payload.getTrackingNumber());
+        log.info("Order shipped: {} via {} — tracking: {}", payload.getOrderId(), payload.getCarrier(),
+                payload.getTrackingNumber());
         return payload;
     }
 
-    @Event(
-        key = "ABANDONED_CART",
-        description = "Customer abandoned their shopping cart",
-        eventType = "deferred",
-        scheduleIntent = "deferred",
-        preferredTimeWindow = "09:00-21:00",
-        priority = 3,
-        payload = CartPayload.class
-    )
+    @Event(key = "ABANDONED_CART", description = "Customer abandoned their shopping cart", eventType = "deferred", scheduleIntent = "deferred", preferredTimeWindow = "09:00-21:00", priority = 3, payload = CartPayload.class)
     public CartPayload abandonCart(CartPayload payload) {
         log.info("🛒 Cart abandoned: {} by customer {}", payload.getCartId(), payload.getCustomerId());
         carts.save(payload);
@@ -115,19 +85,18 @@ public class OrderService {
             return List.of();
         }
         return List.of(new EmailSubject(
-            c.getId(), c.getEmail(), null, null,
-            null, Map.of("firstName", c.getName())
-        ));
+                c.getId(), c.getEmail(), null, null,
+                null, Map.of("firstName", c.getName())));
     }
 
     @SubjectSupplier(event = "PAYMENT_FAILED", description = "Resolves customer to SMS for urgent payment alerts")
     public List<Subject> getPaymentFailedSubjects(OrderPayload payload) {
         Customer c = customers.get(payload.getCustomerId());
-        if (c == null) return List.of();
+        if (c == null)
+            return List.of();
         return List.of(new SmsSubject(
-            c.getId(), c.getPhone(), null,
-            Map.of("firstName", c.getName())
-        ));
+                c.getId(), c.getPhone(), null,
+                Map.of("firstName", c.getName())));
     }
 
     @SubjectSupplier(event = "ORDER_SHIPPED", description = "Resolves order to email recipients for shipment tracking")
@@ -139,21 +108,21 @@ public class OrderService {
             return List.of();
         }
         Customer c = customers.get(order.getCustomerId());
-        if (c == null) return List.of();
+        if (c == null)
+            return List.of();
         return List.of(new EmailSubject(
-            c.getId(), c.getEmail(), null, null,
-            null, Map.of("firstName", c.getName())
-        ));
+                c.getId(), c.getEmail(), null, null,
+                null, Map.of("firstName", c.getName())));
     }
 
     @SubjectSupplier(event = "ABANDONED_CART", description = "Resolves cart owner to email for re-engagement")
     public List<Subject> getCartSubjects(CartPayload payload) {
         Customer c = customers.get(payload.getCustomerId());
-        if (c == null) return List.of();
+        if (c == null)
+            return List.of();
         return List.of(new EmailSubject(
-            c.getId(), c.getEmail(), null, null,
-            null, Map.of("firstName", c.getName())
-        ));
+                c.getId(), c.getEmail(), null, null,
+                null, Map.of("firstName", c.getName())));
     }
 
     // ═══════════════════════════════════════════
@@ -179,14 +148,16 @@ public class OrderService {
     @Rule(name = "fraud-check", event = "ORDER_PLACED", description = "Blocks orders over $1000 as potential fraud")
     public boolean fraudCheck(OrderPayload payload) {
         boolean passed = payload.getAmount() < 1000.0;
-        log.info("🔍 Fraud check for order {}: {} (amount=${})", payload.getOrderId(), passed ? "PASSED" : "BLOCKED", payload.getAmount());
+        log.info("🔍 Fraud check for order {}: {} (amount=${})", payload.getOrderId(), passed ? "PASSED" : "BLOCKED",
+                payload.getAmount());
         return passed;
     }
 
     @Rule(name = "inventory-check", event = "ORDER_PLACED", description = "Checks whether all items are in stock")
     public boolean inventoryCheck(OrderPayload payload) {
         // In-memory: always in stock
-        log.info("📦 Inventory check for order {}: all {} items in stock", payload.getOrderId(), payload.getItems() != null ? payload.getItems().size() : 0);
+        log.info("📦 Inventory check for order {}: all {} items in stock", payload.getOrderId(),
+                payload.getItems() != null ? payload.getItems().size() : 0);
         return true;
     }
 
