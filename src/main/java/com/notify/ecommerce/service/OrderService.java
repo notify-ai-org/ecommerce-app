@@ -85,7 +85,7 @@ public class OrderService {
             return List.of();
         }
         return List.of(new EmailSubject(
-                c.getId(), c.getEmail(), null, null,
+                c.getEmail(), null, null,
                 null, Map.of("firstName", c.getName())));
     }
 
@@ -95,7 +95,7 @@ public class OrderService {
         if (c == null)
             return List.of();
         return List.of(new SmsSubject(
-                c.getId(), c.getPhone(), null,
+                c.getPhone(), null,
                 Map.of("firstName", c.getName())));
     }
 
@@ -111,7 +111,7 @@ public class OrderService {
         if (c == null)
             return List.of();
         return List.of(new EmailSubject(
-                c.getId(), c.getEmail(), null, null,
+                c.getEmail(), null, null,
                 null, Map.of("firstName", c.getName())));
     }
 
@@ -121,7 +121,7 @@ public class OrderService {
         if (c == null)
             return List.of();
         return List.of(new EmailSubject(
-                c.getId(), c.getEmail(), null, null,
+                c.getEmail(), null, null,
                 null, Map.of("firstName", c.getName())));
     }
 
