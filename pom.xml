@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>com.notify</groupId>
+        <groupId>dev.notify-ai</groupId>
         <artifactId>vocabulary-agent-parent</artifactId>
         <version>1.0.0</version>
         <relativePath>../../pom.xml</relativePath>
@@ -20,7 +20,7 @@
 
     <dependencies>
         <dependency>
-            <groupId>com.notify</groupId>
+            <groupId>dev.notify-ai</groupId>
             <artifactId>notify-ai-agent-client</artifactId>
             <version>1.0.0</version>
         </dependency>
