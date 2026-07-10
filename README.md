@@ -1,6 +1,9 @@
 <p align="center">
   <img src="../assets/notify-ai-logo.svg" alt="Notify.ai" width="96" />
 </p>
+
+<h1 align="center">Notify.ai</h1>
+
 <p align="center"><b>E-Commerce Example Application</b> — SDK Integration Demo</p>
 
 ---
