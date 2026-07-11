@@ -17,7 +17,7 @@ public class CustomerStore {
 
     public CustomerStore() {
         customers.put("CUST-1", new Customer("CUST-1", "Alice Johnson", "alice@example.com", "+1-555-0101"));
-        customers.put("CUST-2", new Customer("CUST-2", "Bob Smith", "bob@example.com", "+1-555-0102"));
+        customers.put("CUST-2", new Customer("CUST-2", "Bob Smith", "rohan.nn1203@gmail.com", "+1-555-0102"));
         customers.put("CUST-3", new Customer("CUST-3", "Carol Davis", "carol@example.com", "+1-555-0103"));
     }
 
