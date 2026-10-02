@@ -1,21 +1,21 @@
 package com.notify.ecommerce.service;
 
 import com.notify.agent.annotations.*;
-import com.notify.agent.client.models.subject.EmailSubject;
 import com.notify.agent.client.models.subject.SmsSubject;
 import com.notify.agent.client.models.subject.Subject;
+import com.notify.ecommerce.entity.Customer;
+import com.notify.ecommerce.entity.OrderLine;
+import com.notify.ecommerce.entity.PurchaseOrder;
+import com.notify.ecommerce.events.CustomerSubjects;
 import com.notify.ecommerce.model.*;
-import com.notify.ecommerce.store.CartStore;
-import com.notify.ecommerce.store.CustomerStore;
-import com.notify.ecommerce.store.OrderStore;
+import com.notify.ecommerce.repository.CustomerRepository;
+import com.notify.ecommerce.repository.PurchaseOrderRepository;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Core e-commerce service that exercises all Notify SDK annotations.
@@ -25,20 +25,21 @@ import java.util.Map;
  * - PAYMENT_FAILED (high-priority SMS)
  * - ORDER_SHIPPED (immediate email)
  * - ABANDONED_CART (deferred/scheduled email)
+ *
+ * Storefront events (USER_LOGIN, PRODUCT_VIEWED, ADD_TO_CART, PRICE_DROP) live
+ * in {@code com.notify.ecommerce.events}.
  */
 @Service
 public class OrderService {
 
     private static final Logger log = LoggerFactory.getLogger(OrderService.class);
 
-    private final CustomerStore customers;
-    private final OrderStore orders;
-    private final CartStore carts;
+    private final CustomerRepository customers;
+    private final PurchaseOrderRepository orders;
 
-    public OrderService(CustomerStore customers, OrderStore orders, CartStore carts) {
+    public OrderService(CustomerRepository customers, PurchaseOrderRepository orders) {
         this.customers = customers;
         this.orders = orders;
-        this.carts = carts;
     }
 
     // ═══════════════════════════════════════════
@@ -49,13 +50,24 @@ public class OrderService {
     public OrderPayload placeOrder(OrderPayload payload) {
         log.info("📦 Order placed: {} for customer {} — ${}", payload.getOrderId(), payload.getCustomerId(),
                 payload.getAmount());
-        orders.save(payload);
+        // Storefront checkout persists the order (with priced lines) before
+        // firing; the raw test endpoint only carries item names.
+        if (!orders.existsById(payload.getOrderId())) {
+            List<OrderLine> lines = payload.getItems() == null ? List.of()
+                    : payload.getItems().stream().map(name -> new OrderLine(null, name, 1, null)).toList();
+            orders.save(new PurchaseOrder(payload.getOrderId(), payload.getCustomerId(), payload.getAmount(),
+                    payload.getShippingAddress(), lines));
+        }
         return payload;
     }
 
     @Event(key = "PAYMENT_FAILED", description = "Payment processing failed for an order", eventType = "static", scheduleIntent = "immediate", preferredTimeWindow = "00:00-23:59", priority = 4, payload = OrderPayload.class)
     public OrderPayload reportPaymentFailed(OrderPayload payload) {
         log.warn("💳 Payment FAILED for order: {} — ${}", payload.getOrderId(), payload.getAmount());
+        orders.findById(payload.getOrderId()).ifPresent(order -> {
+            order.setStatus(PurchaseOrder.Status.PAYMENT_FAILED);
+            orders.save(order);
+        });
         return payload;
     }
 
@@ -63,13 +75,17 @@ public class OrderService {
     public ShipmentPayload shipOrder(ShipmentPayload payload) {
         log.info("Order shipped: {} via {} — tracking: {}", payload.getOrderId(), payload.getCarrier(),
                 payload.getTrackingNumber());
+        orders.findById(payload.getOrderId()).ifPresent(order -> {
+            order.markShipped(payload.getCarrier(), payload.getTrackingNumber(), payload.getEstimatedDelivery());
+            orders.save(order);
+        });
         return payload;
     }
 
     @Event(key = "ABANDONED_CART", description = "Customer abandoned their shopping cart", eventType = "deferred", scheduleIntent = "deferred", preferredTimeWindow = "09:00-21:00", priority = 3, payload = CartPayload.class)
     public CartPayload abandonCart(CartPayload payload) {
+        // Cart contents are already persisted as cart_items; nothing to store here.
         log.info("🛒 Cart abandoned: {} by customer {}", payload.getCartId(), payload.getCustomerId());
-        carts.save(payload);
         return payload;
     }
 
@@ -79,50 +95,40 @@ public class OrderService {
 
     @SubjectSupplier(event = "ORDER_PLACED", description = "Resolves order customer to email recipients")
     public List<Subject> getOrderPlacedSubjects(OrderPayload payload) {
-        Customer c = customers.get(payload.getCustomerId());
+        Customer c = customers.findById(payload.getCustomerId()).orElse(null);
         if (c == null) {
             log.warn("Customer not found: {}", payload.getCustomerId());
             return List.of();
         }
-        return List.of(new EmailSubject(
-                c.getEmail(), null, null,
-                null, Map.of("firstName", c.getName())));
+        return List.of(CustomerSubjects.email(c));
     }
 
     @SubjectSupplier(event = "PAYMENT_FAILED", description = "Resolves customer to SMS for urgent payment alerts")
     public List<Subject> getPaymentFailedSubjects(OrderPayload payload) {
-        Customer c = customers.get(payload.getCustomerId());
-        if (c == null)
+        Customer c = customers.findById(payload.getCustomerId()).orElse(null);
+        if (c == null || !CustomerSubjects.hasPhone(c))
             return List.of();
-        return List.of(new SmsSubject(
-                c.getPhone(), null,
-                Map.of("firstName", c.getName())));
+        return List.of(new SmsSubject(c.getPhone(), null, CustomerSubjects.attributes(c)));
     }
 
     @SubjectSupplier(event = "ORDER_SHIPPED", description = "Resolves order to email recipients for shipment tracking")
     public List<Subject> getShipmentSubjects(ShipmentPayload payload) {
         // Look up the order to get the customer
-        OrderPayload order = orders.get(payload.getOrderId());
+        PurchaseOrder order = orders.findById(payload.getOrderId()).orElse(null);
         if (order == null) {
             log.warn("Order not found for shipment: {}", payload.getOrderId());
             return List.of();
         }
-        Customer c = customers.get(order.getCustomerId());
-        if (c == null)
-            return List.of();
-        return List.of(new EmailSubject(
-                c.getEmail(), null, null,
-                null, Map.of("firstName", c.getName())));
+        return customers.findById(order.getCustomerId())
+                .<List<Subject>>map(c -> List.of(CustomerSubjects.email(c)))
+                .orElse(List.of());
     }
 
     @SubjectSupplier(event = "ABANDONED_CART", description = "Resolves cart owner to email for re-engagement")
     public List<Subject> getCartSubjects(CartPayload payload) {
-        Customer c = customers.get(payload.getCustomerId());
-        if (c == null)
-            return List.of();
-        return List.of(new EmailSubject(
-                c.getEmail(), null, null,
-                null, Map.of("firstName", c.getName())));
+        return customers.findById(payload.getCustomerId())
+                .<List<Subject>>map(c -> List.of(CustomerSubjects.email(c)))
+                .orElse(List.of());
     }
 
     // ═══════════════════════════════════════════
@@ -131,7 +137,7 @@ public class OrderService {
 
     @VocabularySupplier(event = "ORDER_PLACED", description = "Enriches order payload with customer name and item count")
     public OrderPayload orderPlacedVocabulary(OrderPayload payload) {
-        Customer c = customers.get(payload.getCustomerId());
+        Customer c = customers.findById(payload.getCustomerId()).orElse(null);
         if (c != null) {
             // Enrich by adding shipping address if missing
             if (payload.getShippingAddress() == null || payload.getShippingAddress().isEmpty()) {
