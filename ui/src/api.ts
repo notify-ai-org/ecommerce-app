@@ -79,8 +79,12 @@ export function setUnauthorizedHandler(handler: () => void) {
   onUnauthorized = handler;
 }
 
+// BASE_URL is "<prefix>/portals/shop/"; the API lives at "<prefix>/api", so the
+// same build works at the root or behind a path-prefixing reverse proxy.
+const API_PREFIX = import.meta.env.BASE_URL.replace(/\/portals\/shop\/$/, '');
+
 async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
-  const res = await fetch(path, {
+  const res = await fetch(API_PREFIX + path, {
     method,
     credentials: 'same-origin',
     headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },

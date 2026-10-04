@@ -1,5 +1,6 @@
 package com.notify.ecommerce.controller;
 
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.CacheControl;
@@ -62,11 +63,11 @@ public class PortalController {
 
     /** Normalize portal roots to a trailing slash, e.g. {@code /portals/shop/}. */
     @GetMapping(value = "/portals/{portal}", produces = MediaType.TEXT_HTML_VALUE)
-    public ResponseEntity<Void> portalRootRedirect(@PathVariable String portal) {
+    public ResponseEntity<Void> portalRootRedirect(@PathVariable String portal, HttpServletRequest request) {
         if (!KNOWN_PORTALS.contains(portal)) {
             return ResponseEntity.notFound().build();
         }
-        return redirect("/portals/" + portal + "/");
+        return redirect(request, "/portals/" + portal + "/");
     }
 
     /**
@@ -94,11 +95,14 @@ public class PortalController {
 
     /** Default entry points: {@code /} and {@code /portals} open the storefront. */
     @GetMapping(value = { "/", "/portals", "/portals/" })
-    public ResponseEntity<Void> defaultPortal() {
-        return redirect("/portals/" + DEFAULT_PORTAL + "/");
+    public ResponseEntity<Void> defaultPortal(HttpServletRequest request) {
+        return redirect(request, "/portals/" + DEFAULT_PORTAL + "/");
     }
 
-    private static ResponseEntity<Void> redirect(String location) {
-        return ResponseEntity.status(HttpStatus.FOUND).location(URI.create(location)).build();
+    /** Redirects within the app, keeping the context path (e.g. {@code /ecommerce}) it is deployed under. */
+    private static ResponseEntity<Void> redirect(HttpServletRequest request, String location) {
+        return ResponseEntity.status(HttpStatus.FOUND)
+                .location(URI.create(request.getContextPath() + location))
+                .build();
     }
 }
