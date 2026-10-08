@@ -3,6 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { firstName } from '../api';
 import { useSession } from '../session';
 import { useToast } from '../toast';
+import NotificationBell from './NotificationBell';
 
 export default function Layout({ children }: { children: ReactNode }) {
   const { customer, cart, logout } = useSession();
@@ -38,6 +39,7 @@ export default function Layout({ children }: { children: ReactNode }) {
           </nav>
           {customer && (
             <div className="user">
+              <NotificationBell />
               <div className="user-meta">
                 <span className="user-name">Hi, {firstName(customer.name)}</span>
                 <span className="user-email">{customer.email}</span>

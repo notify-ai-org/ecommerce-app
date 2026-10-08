@@ -37,11 +37,14 @@ public class ProductEvents {
     private final CustomerRepository customers;
     private final ProductViewRepository views;
     private final CartItemRepository cartItems;
+    private final InAppSubjects inApp;
 
-    public ProductEvents(CustomerRepository customers, ProductViewRepository views, CartItemRepository cartItems) {
+    public ProductEvents(CustomerRepository customers, ProductViewRepository views, CartItemRepository cartItems,
+            InAppSubjects inApp) {
         this.customers = customers;
         this.views = views;
         this.cartItems = cartItems;
+        this.inApp = inApp;
     }
 
     // ═══════════════════════════════════════════
@@ -69,7 +72,7 @@ public class ProductEvents {
     @SubjectSupplier(event = "PRODUCT_VIEWED", description = "Resolves the viewing customer to an email recipient")
     public List<Subject> getProductViewedSubjects(ProductViewedPayload payload) {
         return customers.findById(payload.getCustomerId())
-                .<List<Subject>>map(c -> List.of(CustomerSubjects.email(c)))
+                .map(c -> inApp.with(c, List.of(CustomerSubjects.email(c))))
                 .orElse(List.of());
     }
 
@@ -81,7 +84,8 @@ public class ProductEvents {
         boolean bigDrop = payload.getDropPercent() >= SMS_DROP_THRESHOLD_PERCENT;
         List<Subject> subjects = new ArrayList<>();
         for (Customer c : customers.findAllById(audience)) {
-            subjects.addAll(bigDrop ? CustomerSubjects.emailAndSms(c) : List.of(CustomerSubjects.email(c)));
+            subjects.addAll(inApp.with(c,
+                    bigDrop ? CustomerSubjects.emailAndSms(c) : List.of(CustomerSubjects.email(c))));
         }
         log.info("📉 Price drop audience for {}: {} customers, {} subjects", payload.getProductId(),
                 audience.size(), subjects.size());

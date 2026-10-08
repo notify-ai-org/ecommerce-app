@@ -157,6 +157,26 @@ textarea { resize: vertical; }
   display: inline-grid; place-items: center;
 }
 .user { margin-left: auto; display: flex; align-items: center; gap: 0.85rem; }
+.notify { position: relative; }
+.notify-button {
+  position: relative; display: inline-grid; place-items: center; width: 38px; height: 38px;
+  border-radius: 10px; border: 1px solid var(--border); background: transparent; color: var(--text); cursor: pointer;
+}
+.notify-button:hover, .notify-button[aria-expanded="true"] { background: var(--surface-2); }
+.notify-button:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.notify-count { position: absolute; top: -7px; right: -7px; min-width: 18px; height: 18px; padding: 0 5px; font-size: 0.68rem; }
+.notify-panel {
+  position: absolute; right: 0; top: calc(100% + 0.6rem); z-index: 20;
+  width: min(360px, calc(100vw - 2rem)); max-height: min(70vh, 480px);
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.notify-head { padding: 0.8rem 1rem; font-weight: 700; border-bottom: 1px solid var(--border); }
+.notify-empty { margin: 0; padding: 1.75rem 1rem; text-align: center; }
+.notify-list { list-style: none; margin: 0; padding: 0; overflow-y: auto; }
+.notify-item { padding: 0.75rem 1rem; border-bottom: 1px solid var(--border); }
+.notify-item:last-child { border-bottom: 0; }
+.notify-new { background: var(--primary-soft); }
+.notify-message { margin: 0 0 0.25rem; font-size: 0.9rem; line-height: 1.4; white-space: pre-line; overflow-wrap: anywhere; }
 .user-meta { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.2; }
 .user-name { font-weight: 600; font-size: 0.9rem; }
 .user-email { color: var(--muted); font-size: 0.78rem; }
@@ -307,6 +327,10 @@ textarea { resize: vertical; }
 @media (max-width: 640px) {
   .topbar-inner { flex-wrap: wrap; gap: 0.5rem 1rem; }
   .user-meta { display: none; }
+  /* The bell is not at the screen edge here, so span the panel across the top bar instead. */
+  .topbar-inner { position: relative; }
+  .notify { position: static; }
+  .notify-panel { left: 1rem; right: 1rem; top: 3.5rem; width: auto; }
   .nav { order: 3; width: 100%; }
   .filters, .search { width: 100%; }
   .grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }

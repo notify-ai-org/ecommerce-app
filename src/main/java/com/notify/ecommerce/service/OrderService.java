@@ -7,6 +7,7 @@ import com.notify.ecommerce.entity.Customer;
 import com.notify.ecommerce.entity.OrderLine;
 import com.notify.ecommerce.entity.PurchaseOrder;
 import com.notify.ecommerce.events.CustomerSubjects;
+import com.notify.ecommerce.events.InAppSubjects;
 import com.notify.ecommerce.model.*;
 import com.notify.ecommerce.repository.CustomerRepository;
 import com.notify.ecommerce.repository.PurchaseOrderRepository;
@@ -36,10 +37,12 @@ public class OrderService {
 
     private final CustomerRepository customers;
     private final PurchaseOrderRepository orders;
+    private final InAppSubjects inApp;
 
-    public OrderService(CustomerRepository customers, PurchaseOrderRepository orders) {
+    public OrderService(CustomerRepository customers, PurchaseOrderRepository orders, InAppSubjects inApp) {
         this.customers = customers;
         this.orders = orders;
+        this.inApp = inApp;
     }
 
     // ═══════════════════════════════════════════
@@ -100,15 +103,17 @@ public class OrderService {
             log.warn("Customer not found: {}", payload.getCustomerId());
             return List.of();
         }
-        return List.of(CustomerSubjects.email(c));
+        return inApp.with(c, List.of(CustomerSubjects.email(c)));
     }
 
     @SubjectSupplier(event = "PAYMENT_FAILED", description = "Resolves customer to SMS for urgent payment alerts")
     public List<Subject> getPaymentFailedSubjects(OrderPayload payload) {
         Customer c = customers.findById(payload.getCustomerId()).orElse(null);
-        if (c == null || !CustomerSubjects.hasPhone(c))
+        if (c == null)
             return List.of();
-        return List.of(new SmsSubject(c.getPhone(), null, CustomerSubjects.attributes(c)));
+        if (!CustomerSubjects.hasPhone(c))
+            return inApp.with(c, List.of());
+        return inApp.with(c, List.of(new SmsSubject(c.getPhone(), null, CustomerSubjects.attributes(c))));
     }
 
     @SubjectSupplier(event = "ORDER_SHIPPED", description = "Resolves order to email recipients for shipment tracking")
@@ -120,14 +125,14 @@ public class OrderService {
             return List.of();
         }
         return customers.findById(order.getCustomerId())
-                .<List<Subject>>map(c -> List.of(CustomerSubjects.email(c)))
+                .map(c -> inApp.with(c, List.of(CustomerSubjects.email(c))))
                 .orElse(List.of());
     }
 
     @SubjectSupplier(event = "ABANDONED_CART", description = "Resolves cart owner to email for re-engagement")
     public List<Subject> getCartSubjects(CartPayload payload) {
         return customers.findById(payload.getCustomerId())
-                .<List<Subject>>map(c -> List.of(CustomerSubjects.email(c)))
+                .map(c -> inApp.with(c, List.of(CustomerSubjects.email(c))))
                 .orElse(List.of());
     }
 

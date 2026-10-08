@@ -19,9 +19,11 @@ public class CartEvents {
     private static final Logger log = LoggerFactory.getLogger(CartEvents.class);
 
     private final CustomerRepository customers;
+    private final InAppSubjects inApp;
 
-    public CartEvents(CustomerRepository customers) {
+    public CartEvents(CustomerRepository customers, InAppSubjects inApp) {
         this.customers = customers;
+        this.inApp = inApp;
     }
 
     @Event(key = "ADD_TO_CART", description = "Customer added a product to their cart", eventType = "static", scheduleIntent = "immediate", preferredTimeWindow = "09:00-21:00", priority = 2, payload = AddToCartPayload.class)
@@ -34,7 +36,7 @@ public class CartEvents {
     @SubjectSupplier(event = "ADD_TO_CART", description = "Resolves the cart owner to an email recipient")
     public List<Subject> getAddToCartSubjects(AddToCartPayload payload) {
         return customers.findById(payload.getCustomerId())
-                .<List<Subject>>map(c -> List.of(CustomerSubjects.email(c)))
+                .map(c -> inApp.with(c, List.of(CustomerSubjects.email(c))))
                 .orElse(List.of());
     }
 }

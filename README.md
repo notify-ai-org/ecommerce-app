@@ -29,6 +29,28 @@ The `ecommerce-app` module is a fully functional sample Spring Boot application 
 | `ORDER_SHIPPED` | `POST /api/orders/{id}/simulate-shipment`, `POST /api/orders/ship` | Email | — |
 | `ABANDONED_CART` | `POST /api/cart/abandon`, `POST /api/orders/abandon-cart` | Email | — |
 
+### In-app notifications
+
+The storefront has a bell in the top bar that opens a notifications panel. Notify delivers `IN_APP`
+messages to this app over a signed webhook, and the app stores them per customer.
+
+| Endpoint | Caller | Purpose |
+|---|---|---|
+| `POST /api/notifications/webhook` | Notify | Receives a delivery. Verified with the `X-Signature` HMAC-SHA256 header; the envelope's `recipientId` is the customer id. |
+| `GET /api/notifications` | Signed-in customer | The 50 newest notifications and the unread count. |
+| `POST /api/notifications/read` | Signed-in customer | Marks all as read (called when the panel opens). |
+
+To enable it:
+
+1. In the Notify portal, create an `IN_APP` channel (provider `WEBHOOK`) whose endpoint is this app's
+   public URL for the webhook, e.g. `https://<host>/ecommerce/api/notifications/webhook`, and save a
+   signing secret for it.
+2. Set `ECOMMERCE_IN_APP_WEBHOOK_URL` to exactly that endpoint and `ECOMMERCE_IN_APP_SIGNING_SECRET`
+   to the same secret.
+
+With the URL set, every event's subject supplier also returns an in-app subject for the customer
+(`events/InAppSubjects`). Without the secret the webhook rejects all deliveries.
+
 ## 💾 Persistence (H2)
 
 Customers, products, carts, browsing history and orders are stored in a file-backed H2 database at `examples/ecommerce-app/data/` (git-ignored), created and seeded on first start. Override with `ECOMMERCE_DB_URL` (for example `jdbc:h2:mem:ecommerce` for a throwaway DB). The H2 console is at `http://localhost:8090/h2-console` (user `sa`, empty password).

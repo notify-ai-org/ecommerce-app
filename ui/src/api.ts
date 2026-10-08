@@ -54,6 +54,18 @@ export interface Order {
   lines: OrderLine[];
 }
 
+export interface Notification {
+  id: string;
+  message: string;
+  createdAt: string;
+  read: boolean;
+}
+
+export interface NotificationList {
+  items: Notification[];
+  unreadCount: number;
+}
+
 export interface LoginForm {
   name: string;
   email: string;
@@ -126,6 +138,9 @@ export const api = {
   checkout: (shippingAddress: string) => request<Order>('POST', '/api/orders/checkout', { shippingAddress }),
   simulateShipment: (orderId: string) =>
     request<Order>('POST', `/api/orders/${encodeURIComponent(orderId)}/simulate-shipment`),
+
+  notifications: () => request<NotificationList>('GET', '/api/notifications'),
+  markNotificationsRead: () => request<NotificationList>('POST', '/api/notifications/read'),
 };
 
 const currency = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
