@@ -4,25 +4,19 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <!-- Standalone build: depends on the Notify SDK only as a published artifact. -->
     <parent>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.2.0</version>
-        <relativePath/>
+        <groupId>dev.notify-ai</groupId>
+        <artifactId>vocabulary-agent-parent</artifactId>
+        <version>1.0.0</version>
+        <relativePath>../../pom.xml</relativePath>
     </parent>
 
-    <groupId>dev.notify-ai</groupId>
     <artifactId>ecommerce-app</artifactId>
     <version>1.0.0</version>
     <packaging>jar</packaging>
 
     <name>E-Commerce Demo App</name>
     <description>Dummy e-commerce Spring Boot app to test the Notification Engine SDK</description>
-
-    <properties>
-        <java.version>17</java.version>
-    </properties>
 
     <dependencies>
         <dependency>
@@ -68,8 +62,9 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+                <version>${spring.boot.version}</version>
                 <executions>
-                    <!-- Produces the executable jar used by deploy/ecommerce/Dockerfile in notify-ai-org/examples. -->
+                    <!-- Produces the executable jar used by deploy/ecommerce/Dockerfile. -->
                     <execution>
                         <goals>
                             <goal>repackage</goal>
@@ -84,7 +79,7 @@
         <!--
             Builds the React storefront (ui/) into
             src/main/resources/static/portals/shop/ before packaging:
-              mvn -Pui package
+              mvn -Pui package -pl examples/ecommerce-app
         -->
         <profile>
             <id>ui</id>
