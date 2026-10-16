@@ -53,7 +53,7 @@ With the URL set, every event's subject supplier also returns an in-app subject 
 
 ## 💾 Persistence (H2)
 
-Customers, products, carts, browsing history and orders are stored in a file-backed H2 database at `examples/ecommerce-app/data/` (git-ignored), created and seeded on first start. Override with `ECOMMERCE_DB_URL` (for example `jdbc:h2:mem:ecommerce` for a throwaway DB). The H2 console is at `http://localhost:8090/h2-console` (user `sa`, empty password).
+Customers, products, carts, browsing history and orders are stored in a file-backed H2 database at `data/` (git-ignored), created and seeded on first start. Override with `ECOMMERCE_DB_URL` (for example `jdbc:h2:mem:ecommerce` for a throwaway DB). The H2 console is at `http://localhost:8090/h2-console` (user `sa`, empty password).
 
 Seeded customers `alice@example.com`, `rohan.nn1203@gmail.com` and `carol@example.com` sign in with password `password123`.
 
@@ -67,12 +67,12 @@ The build is written to `src/main/resources/static/portals/shop/` and served by 
 
 ```bash
 # Build the UI into the Spring Boot classpath
-cd examples/ecommerce-app/ui && npm install && npm run build
+cd ui && npm install && npm run build
 # …or as part of the Maven build
-mvn -Pui package -pl examples/ecommerce-app
+mvn -Pui package
 
 # Hot-reload development (proxies /api to :8090)
-cd examples/ecommerce-app/ui && npm run dev   # → http://localhost:5174/portals/shop/
+cd ui && npm run dev   # → http://localhost:5174/portals/shop/
 ```
 
 ## 🚀 Running Locally
@@ -83,9 +83,9 @@ You can run the e-commerce sample locally to test the event capture and dispatch
 - **Notify.ai Control Plane**: Ensure the backend application (`access` module) is running on `http://localhost:8080`.
 
 ### Execution
-From the root directory of the project, run:
+From this directory, run:
 ```bash
-mvn spring-boot:run -pl examples/ecommerce-app
+mvn spring-boot:run
 ```
 By default, the application runs on port **8090**. Open `http://localhost:8090/` for the storefront.
 
