@@ -4,7 +4,6 @@ import com.notify.agent.client.models.subject.InAppSubject;
 import com.notify.agent.client.models.subject.Subject;
 import com.notify.ecommerce.entity.Customer;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -18,18 +17,10 @@ import java.util.List;
 @Component
 public class InAppSubjects {
 
-    private final String webhookUrl;
-
-    public InAppSubjects(@Value("${ecommerce.in-app.webhook-url:}") String webhookUrl) {
-        this.webhookUrl = webhookUrl.trim();
-    }
-
     /** The given subjects plus the customer's in-app inbox, when in-app delivery is configured. */
     public List<Subject> with(Customer c, List<? extends Subject> subjects) {
         List<Subject> all = new ArrayList<>(subjects);
-        if (!webhookUrl.isEmpty()) {
-            all.add(new InAppSubject(webhookUrl, c.getId(), null, CustomerSubjects.attributes(c)));
-        }
+        all.add(new InAppSubject(null, c.getId(), null, CustomerSubjects.attributes(c)));
         return all;
     }
 }
